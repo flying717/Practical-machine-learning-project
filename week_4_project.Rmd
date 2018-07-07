@@ -1,0 +1,115 @@
+---
+title: "Practical Machine Learning_project"
+author: "XD"
+date: "June 27, 2018"
+output: 
+  html_document:
+    keep_md: true
+---
+
+## Instructions
+### The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+```{r}
+setwd("C:/Users/xihui/Desktop/datascience related/practical machine learning/project")
+```
+
+```{r,message=FALSE}
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+```
+
+### read data
+
+```{r}
+testing<-read.csv("pml-testing.csv")
+training<-read.csv("pml-training.csv")
+```
+```{r}
+str(testing)
+```
+
+```{r}
+str(training)
+```
+
+### Cleaning data
+#### Remove all columns that, contains NA and remove features that are not in the testing dataset, since the testing dataset has no time-dependence, these values are useless and can be disregarded. The first 7 features can be removed since they are related to the time-series or are not numeric
+
+```{r}
+features <- names(testing[,colSums(is.na(testing)) == 0])[8:59]
+testing_1 <- testing[,c(features, "problem_id")]
+dim(testing_1)
+```
+
+#### training data only use features 
+```{r}
+training_1 <- training[, c(features,"classe")]
+dim(training_1)
+```
+
+### Partitioning the training dataset to a Training set (70% of the data) for the modeling process and a Test set (with the remaining 30%) for the validations.
+
+```{r}
+set.seed(511)
+
+inTrain <- createDataPartition(training_1$classe, p=0.7, list=FALSE)
+training_2 <- training_1[inTrain,]
+testing_2 <- training_1[-inTrain,]
+
+dim(training_2)
+```
+```{r}
+dim(testing_2)
+```
+
+### Building the decision tree model
+
+```{r}
+DTmodel <- rpart(classe ~ ., data = training_2, method="class")
+fancyRpartPlot(DTmodel)
+```
+
+### Predicting with the Decision Tree Model
+
+```{r}
+set.seed(511)
+
+prediction <- predict(DTmodel, testing_2, type = "class")
+confusionMatrix(prediction, testing_2$classe)
+```
+
+### Building the Random Forest Model
+
+```{r}
+set.seed(511)
+RFmodel <- randomForest(classe ~ ., data = training_2, ntree = 1000)
+```
+
+### Predicting with the Random Forest Model
+
+```{r}
+prediction <- predict(RFmodel, testing_2, type = "class")
+confusionMatrix(prediction, testing_2$classe)
+```
+
+### Predicting on the testing data
+#### Decision tree prediction
+
+```{r}
+DTprediction <- predict(DTmodel, testing, type = "class")
+DTprediction
+```
+
+#### Random forest prediction
+
+```{r}
+RFprediction <- predict(RFmodel, testing, type = "class")
+RFprediction
+```
+
+### Summary
+#### Since the accuracy of Random Forest model (99.54%) is much higher, we will use this model prediction result.
